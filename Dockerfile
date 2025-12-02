@@ -59,13 +59,13 @@ RUN mkdir -p logs && chown -R nodejs:nodejs logs
 USER nodejs
 
 ENV NODE_ENV=production \
-    PORT=5000
+    PORT=8000
 
-EXPOSE 5000
+EXPOSE 8000
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:5000/', r => process.exit(r.statusCode === 200 ? 0 : 1))"
+    CMD node -e "require('http').get('http://localhost:8000/', r => process.exit(r.statusCode === 200 ? 0 : 1))"
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "src/app.js"]
