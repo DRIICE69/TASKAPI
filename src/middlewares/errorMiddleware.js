@@ -9,10 +9,9 @@ function notFoundHandler(req, res, next) {
 }
 
 /**
- * Wrapper pour les fonctions async
- * Évite d'avoir à écrire try/catch dans chaque contrôleur
+ * Middleware de gestion des erreurs
+ * Envoie une réponse JSON avec le message d'erreur
  */
-
 function errorHandler(err, req, res, next) {
     let error = { ...err };
     error.message = err.message;

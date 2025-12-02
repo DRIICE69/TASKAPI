@@ -1,36 +1,14 @@
 const Task = require('../models/taskModel');
 const { catchAsync } = require('../middlewares/errorMiddleware');
 const { logger } = require('../utils/logger');
-const { generateTxId } = require('../utils/core');
+const { generateTxId, sanitizeTask, sanitizeTasks } = require('../utils/core');
 const NodeCache = require('node-cache');
 const taskCache = new NodeCache();
 /**
  * 
  */
 class TaskController {
-  /**
-   * Helper: nettoie un document de tâche ou un objet plat
-   * @param {Object} task - Le document de tâche ou l'objet plat à nettoyer
-   * @returns {Object} Le document de tâche ou l'objet plat nettoyé
-   */
-  sanitizeTask(task) {
-    if (!task) return null;
-    const obj = typeof task.toObject === 'function' ? task.toObject() : { ...task };
-    delete obj.__v;
-    delete obj.createdAt;
-    delete obj.updatedAt;
-    delete obj._id;
-    return obj;
-  }
 
-  /**
-   * Helper: nettoie un tableau de tâches
-   * @param {Array} tasks - Le tableau de tâches à nettoyer
-   * @returns {Array} Le tableau de tâches nettoyé
-   */
-  sanitizeTasks(tasks) {
-    return Array.isArray(tasks) ? tasks.map(this.sanitizeTask) : [];
-  }
 
   /**
    * Récupère toutes les tâches
@@ -43,8 +21,8 @@ class TaskController {
         return { statusCode: 200, success: true, data: cachedTasks };
       }
       const tasks = await Task.find({ status: 'active' }).sort({ createdAt: -1 });
-      taskCache.set('tasks', this.sanitizeTasks(tasks));
-      return { statusCode: 200, success: true, data: this.sanitizeTasks(tasks) };
+      taskCache.set('tasks', sanitizeTasks(tasks));
+      return { statusCode: 200, success: true, data: sanitizeTasks(tasks) };
     } catch (err) {
       throw new Error(err);
     }
@@ -66,7 +44,7 @@ class TaskController {
         logger.error(`Tâche ${id} non trouvée`);
         return { statusCode: 404, success: false, message: 'Tâche non trouvée' };
       }
-      return { statusCode: 200, success: true, data: task ? this.sanitizeTask(task) : null };
+      return { statusCode: 200, success: true, data: task ? sanitizeTask(task) : null };
     } catch (err) {
       throw new Error(err);
     }
@@ -87,7 +65,7 @@ class TaskController {
 
       // Invalidation du cache 'tasks' pour forcer le rechargement
       taskCache.del("tasks");
-      const sanitizedTask = this.sanitizeTask(task);
+      const sanitizedTask = sanitizeTask(task);
       // Mise à jour du cache individuel
       taskCache.set(task.taskId, sanitizedTask);
 
@@ -123,7 +101,7 @@ class TaskController {
         return { statusCode: 404, success: false, message: 'Tâche non trouvée ou impossible à mettre à jour' };
       }
 
-      const sanitizedTask = this.sanitizeTask(task);
+      const sanitizedTask = sanitizeTask(task);
 
       taskCache.set(taskId, sanitizedTask);
 
@@ -162,7 +140,7 @@ class TaskController {
       taskCache.del('tasks');
 
       logger.info(`Tâche ${task.taskId} supprimée avec succès`);
-      return { statusCode: 200, success: true, data: this.sanitizeTask(task) };
+      return { statusCode: 200, success: true, data: sanitizeTask(task) };
     } catch (err) {
       logger.error(`Erreur lors de la suppression de la tâche: ${err.message}`);
       throw new Error(err);
