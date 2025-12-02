@@ -4,11 +4,11 @@ const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
-const connectDB = require('./config/db');
-const { httpLogger } = require('./middlewares/httpLogger');
-const { notFoundHandler, errorHandler } = require('./middlewares/errorMiddleware');
+const connectDB = require('./v1/config/db');
+const { httpLogger } = require('./v1/middlewares/httpLogger');
+const { notFoundHandler, errorHandler } = require('./v1/middlewares/errorMiddleware');
 dotenv.config();
-
+const { logger } = require('./v1/utils/logger');
 const app = express();
 
 app.set('trust proxy', 1);
@@ -78,11 +78,20 @@ app.use((err, req, res, next) => {
   next();
 });
 
-//  Intégration des routes
-const routes = [
-  './routes/taskRoutes',
+//  Intégration des routes avec versioning
+const apiVersions = [
+  { version: 'v1', path: './v1/routes/taskRoutes' },
 ];
-routes.forEach(r => app.use('/', require(r)));
+
+// Monter chaque version
+apiVersions.forEach(({ version, path }) => {
+  const routes = require(path);
+  app.use(`/api/${version}`, routes);
+});
+
+// Rétrocompatibilité : /api pointe vers la dernière version stable
+const latestStableVersion = apiVersions[0];
+app.use('/api', require(latestStableVersion.path));
 
 // Lister routes
 function listRoutes(app) {
@@ -114,15 +123,15 @@ app.use(notFoundHandler);
 // Gestion des erreurs
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
 
 connectDB()
   .then(() => {
-    const TaskController = require('./controllers/taskController');
+    const TaskController = require('./v1/controllers/taskController');
     TaskController.getAllTasks();
-    app.listen(PORT, () => console.log(`Serveur démarré sur le port ${PORT}`));
+    app.listen(PORT, () => logger.info(`Server running on port ${PORT}`));
   })
   .catch((err) => {
-    console.error('Connexion à la base de données échouée', err);
+    logger.error(`Connexion à la base de données échouée : ${err.message}`);
     process.exit(1);
   });
