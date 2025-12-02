@@ -40,5 +40,5 @@ API endpoints:
 
 Variables d'environnement:
 - `MONGO_URI` (ex: `mongodb://mongo:27017/todo_db`)
-- `PORT` (default 5000)
+- `PORT` (default 8000)
 
